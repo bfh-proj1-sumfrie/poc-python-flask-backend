@@ -1,7 +1,11 @@
+import datetime
+import decimal
+
 from flask import Flask, json, make_response
-from sqlchain.database import engine
 from sqlalchemy import text
-import decimal, datetime
+from sqlalchemy.exc import SQLAlchemyError
+
+from sqlchain.database import engine
 
 application = Flask(__name__)
 
@@ -16,7 +20,11 @@ application.config.from_envvar('FLASK_SERVER_SETTINGS', silent=True)
 def query_controller(query):
     print query
     sql = text(query)
-    users = engine.execute(sql)
+    try:
+        users = engine.execute(sql)
+    except SQLAlchemyError as err:
+        return json.jsonify({"error": str(err)})
+
     data = json.dumps([dict(r) for r in users], default=alchemy_encoder)
     r = make_response(data)
     r.mimetype = 'application/json'
