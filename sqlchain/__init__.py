@@ -1,8 +1,7 @@
-from flask import Flask, json
-from sqlchain.database import db_session
+from flask import Flask, json, make_response
 from sqlchain.database import engine
-from sqlchain.models import User
 from sqlalchemy import text
+import decimal, datetime
 
 application = Flask(__name__)
 
@@ -13,26 +12,20 @@ application.config.update(dict(
 application.config.from_envvar('FLASK_SERVER_SETTINGS', silent=True)
 
 
-@application.teardown_appcontext
-def shutdown_dbsession(exception=None):
-    db_session.remove()
-
-
 @application.route('/query/<query>')
 def query_controller(query):
     print query
     sql = text(query)
     users = engine.execute(sql)
-    return json.jsonify([to_dict(user) for user in users])
+    data = json.dumps([dict(r) for r in users], default=alchemy_encoder)
+    r = make_response(data)
+    r.mimetype = 'application/json'
+    return r
 
 
-def to_dict(user):
-    return {
-        'user_id': user.user_id,
-        'username': user.username,
-        'password': user.password,
-        'first_name': user.first_name,
-        'last_name': user.last_name,
-        'status': user.status,
-        'gender': user.gender,
-    }
+# JSON encoder function for SQLAlchemy special classes
+def alchemy_encoder(obj):
+    if isinstance(obj, datetime.date):
+        return obj.isoformat()
+    elif isinstance(obj, decimal.Decimal):
+        return float(obj)
