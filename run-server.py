@@ -1,2 +1,2 @@
 from sqlchain import application
-application.run(debug=True)
+application.run(debug=False)
